@@ -46,6 +46,7 @@
 
   let settings: Settings;
   let messagesEl = $state<HTMLDivElement>();
+  let inputEl = $state<HTMLInputElement>();
   let dosEl = $state<HTMLDivElement>();
   let dos: { stop: () => void } | undefined;
 
@@ -70,6 +71,10 @@
   $effect(() => {
     lines.length;
     if (messagesEl) messagesEl.scrollTop = messagesEl.scrollHeight;
+  });
+
+  $effect(() => {
+    inputEl?.focus();
   });
 
   $effect(() => {
@@ -127,6 +132,7 @@
 
   async function send(event: SubmitEvent): Promise<void> {
     event.preventDefault();
+    if (busy) return;
     const text = draft.trim();
     if (!text || !catalog) return;
     draft = "";
@@ -146,6 +152,9 @@
     history.push({ role: "user", content: text }, turn);
     if (history.length > 40) history.splice(0, history.length - 40);
     busy = false;
+    // 보내기 버튼을 눌렀으면 포커스가 버튼에 남는다. 입력창으로 되돌린다.
+    await tick();
+    inputEl?.focus();
   }
 
   async function startDos(): Promise<void> {
@@ -197,8 +206,8 @@
           <form id="chat-form" onsubmit={send}>
             <input
               id="input"
+              bind:this={inputEl}
               bind:value={draft}
-              disabled={busy}
               autocomplete="off"
               placeholder="할 말을 입력하세요"
               aria-label="대화 입력"

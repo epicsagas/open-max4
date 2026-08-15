@@ -55,3 +55,28 @@ test("switches the status line when byok is enabled without a key", async () => 
   assert.match(target.innerHTML, /BYOK · 설정 안 됨/);
   unmount(app);
 });
+
+test("keeps the composer focused and usable while a turn is in flight", async () => {
+  const target = document.createElement("div");
+  document.body.append(target);
+  const app = mount(App, { target });
+  await Promise.resolve();
+
+  const input = target.querySelector<HTMLInputElement>("#input");
+  const form = target.querySelector<HTMLFormElement>("#chat-form");
+  assert.ok(input && form);
+
+  // 마운트 직후 바로 칠 수 있어야 한다.
+  assert.equal(document.activeElement, input);
+
+  input.value = "안녕";
+  input.dispatchEvent(new Event("input"));
+  form.dispatchEvent(new SubmitEvent("submit", { cancelable: true }));
+  await new Promise((resolve) => setTimeout(resolve, 0));
+
+  // 전송 뒤에도 포커스가 남고, 입력창은 잠기지 않는다.
+  assert.equal(document.activeElement, input);
+  assert.equal(input.disabled, false);
+
+  unmount(app);
+});
