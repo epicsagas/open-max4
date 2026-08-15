@@ -80,3 +80,90 @@ test("keeps the composer focused and usable while a turn is in flight", async ()
 
   unmount(app);
 });
+
+test("the settings dialog can be typed into and closed from the title bar", async () => {
+  const target = document.createElement("div");
+  document.body.append(target);
+  const app = mount(App, { target });
+  await Promise.resolve();
+
+  const dialog = document.querySelector("dialog");
+  const key = document.querySelector<HTMLInputElement>('input[type="password"]');
+  const close = document.querySelector<HTMLButtonElement>("dialog .sysmenu");
+  assert.ok(dialog && key && close);
+
+  // 크롬이 로그인 폼으로 오인하지 않도록 하는 힌트가 붙어 있어야 한다.
+  assert.equal(key.getAttribute("autocomplete"), "new-password");
+
+  target.querySelector<HTMLButtonElement>("button")?.click();
+  key.value = "sk-test";
+  key.dispatchEvent(new Event("input"));
+  assert.equal(key.value, "sk-test");
+
+  close.click();
+  assert.equal(dialog.open, false);
+
+  unmount(app);
+});
+
+test("clearing the key leaves the dialog open and the endpoint saved", async () => {
+  localStorage.setItem(
+    "max4-byok",
+    JSON.stringify({ endpoint: "https://api.example.test/v1", model: "m", persona: "1994" }),
+  );
+  sessionStorage.setItem("max4-byok-key", "sk-test");
+
+  const target = document.createElement("div");
+  document.body.append(target);
+  const app = mount(App, { target });
+  await Promise.resolve();
+
+  const dialog = document.querySelector("dialog");
+  const key = document.querySelector<HTMLInputElement>('input[type="password"]');
+  assert.ok(dialog && key);
+  target.querySelector<HTMLButtonElement>("button")?.click();
+
+  const forget = [...document.querySelectorAll<HTMLButtonElement>("dialog button")].find(
+    (button) => button.textContent?.includes("키 지우기"),
+  );
+  assert.ok(forget);
+  forget.click();
+  await Promise.resolve();
+
+  assert.equal(key.value, "");
+  assert.equal(sessionStorage.getItem("max4-byok-key"), null);
+  assert.equal(dialog.open, true, "모달은 열려 있어야 한다");
+  assert.ok(localStorage.getItem("max4-byok"), "엔드포인트·모델은 남아야 한다");
+
+  unmount(app);
+});
+
+test("byok follows the key: on when saved or restored, off when cleared", async () => {
+  localStorage.setItem(
+    "max4-byok",
+    JSON.stringify({ endpoint: "https://api.example.test/v1", model: "m", persona: "1994" }),
+  );
+  sessionStorage.setItem("max4-byok-key", "sk-test");
+
+  const target = document.createElement("div");
+  document.body.append(target);
+  const app = mount(App, { target });
+  await Promise.resolve();
+
+  const checkbox = target.querySelector<HTMLInputElement>('input[type="checkbox"]');
+  assert.ok(checkbox);
+  assert.equal(checkbox.checked, true, "복원된 키가 있으면 켜져 있어야 한다");
+  assert.match(target.innerHTML, /BYOK · 고증 1994/);
+
+  const forget = [...document.querySelectorAll<HTMLButtonElement>("dialog button")].find(
+    (button) => button.textContent?.includes("키 지우기"),
+  );
+  assert.ok(forget);
+  forget.click();
+  await Promise.resolve();
+
+  assert.equal(checkbox.checked, false, "키를 지우면 꺼져야 한다");
+  assert.match(target.innerHTML, /원본 엔진/);
+
+  unmount(app);
+});

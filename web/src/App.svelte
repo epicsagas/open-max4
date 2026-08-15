@@ -33,8 +33,10 @@
 
   let catalog = $state<Catalog>();
   let eraPack = $state<EraPack>();
-  let byok = $state<ByokConfig | undefined>(restore());
-  let byokEnabled = $state(false);
+  const restored = restore();
+  let byok = $state<ByokConfig | undefined>(restored);
+  // 키가 살아 있으면 켠 채로 시작한다.
+  let byokEnabled = $state(Boolean(restored));
   let legacy = $state(false);
   let busy = $state(false);
   let thinking = $state(false);
@@ -95,15 +97,18 @@
 
   function persist(config: ByokConfig): void {
     byok = config;
+    byokEnabled = true;
     const { apiKey, ...rest } = config;
     localStorage.setItem(STORE.config, JSON.stringify(rest satisfies StoredConfig));
     sessionStorage.setItem(STORE.key, apiKey);
   }
 
+  // 키가 없으면 요청을 못 보내므로 byok을 비운다.
+  // 엔드포인트·모델·모드는 localStorage에 그대로 둔다.
   function forget(): void {
     byok = undefined;
+    byokEnabled = false;
     sessionStorage.removeItem(STORE.key);
-    localStorage.removeItem(STORE.config);
   }
 
   async function aiReply(context: TurnContext, turn: ChatMessage): Promise<void> {
