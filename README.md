@@ -1,6 +1,6 @@
-# MAX 4.00 — 웹 복원판
+# open-max4
 
-1994년 국내 PC통신 공개자료실에 올라왔던 도스용 대화 프로그램 **MAX 4.00**의 응답 엔진을 분석해 웹에서 다시 구현한 프로젝트입니다. 선택적으로 OpenAI 호환 LLM을 붙여 당시 지식만 아는 페르소나로 대화할 수 있습니다.
+1994년 국내 PC통신 공개자료실에 올라왔던 도스용 대화 프로그램 **MAX 4.0**의 응답 엔진을 분석해 웹에서 다시 구현한 비공식 복원판입니다. 선택적으로 OpenAI 호환 LLM을 붙여 당시 지식만 아는 페르소나로 대화할 수 있습니다.
 
 <img width="100%" src="assets/open-max4.png" alt="open-max4: 고증 1994 모드 대화 화면" />
 
@@ -76,7 +76,7 @@ python3 -m unittest discover tests   # 추출기
 ## 라이선스와 제3자 구성요소
 
 이 저장소의 코드와 문서는 [MIT 라이선스](LICENSE)입니다.
-**원본 MAX 4.00에는 적용되지 않습니다!**
+**원본 MAX 4.0에는 적용되지 않습니다!**
 
 - [js-dos](https://js-dos.com) — GPL-2.0. 실행 시 공급자 CDN에서 불러오며 이 저장소가 번들·재배포하지 않습니다.
 - [Svelte](https://svelte.dev) — MIT. [Vite](https://vite.dev) — MIT.
