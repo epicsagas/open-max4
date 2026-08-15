@@ -25,20 +25,24 @@ mkdir -p ref/max4
 응답 데이터를 추출합니다.
 
 ```sh
-mkdir -p web/local
-python3 -m tools.extract_max4_data ref/max4 -o web/local/max4-pjm.json
+mkdir -p web/public/local
+python3 -m tools.extract_max4_data ref/max4 -o web/public/local/max4-pjm.json
 ```
 
-도스 원본을 브라우저에서 그대로 돌리려면 js-dos 번들(`web/local/max4.jsdos`)을 직접 만들어 두어야 합니다. 없으면 `원본 DOS` 버튼만 동작하지 않고 나머지는 정상 동작합니다.
+도스 원본을 브라우저에서 그대로 돌리려면 js-dos 번들(`web/public/local/max4.jsdos`)을 직접 만들어 두어야 합니다. 없으면 `원본 DOS` 버튼만 동작하지 않고 나머지는 정상 동작합니다.
 
 ## 실행
 
 ```sh
-cd web
-python3 -m http.server 8080
+npm install
+npm run dev
 ```
 
-http://localhost:8080 으로 접속합니다. `file://`로 열면 브라우저 보안 정책 때문에 동작하지 않습니다.
+Vite가 알려주는 주소로 접속합니다. 배포용 정적 파일은 `npm run build`로 `dist/`에 만듭니다.
+
+> **`dist/`를 그대로 공개하지 마세요.** 빌드는 `web/public/`을 통째로 복사하므로,
+> 준비해 둔 원본 사본(`web/public/local/`)이 산출물에 그대로 들어갑니다.
+> 공개 배포하려면 그 디렉터리를 비우고 빌드하세요.
 
 자세한 화면 설명과 BYOK 설정은 [web/README.md](web/README.md)를 보세요.
 
@@ -46,10 +50,13 @@ http://localhost:8080 으로 접속합니다. `file://`로 열면 브라우저 �
 
 | 경로 | 내용 |
 |---|---|
-| `web/app/engine.js` | 원본 응답 선택 로직 재구현 |
-| `web/app/byok.js` | OpenAI 호환 요청 생성, 페르소나·고증 프롬프트 |
-| `web/app/era.js` | 1990년대 고증 팩 검색 (연도 컷오프 + 키워드 매칭) |
-| `web/data/era-1990s.json` | 고증 팩 데이터 |
+| `web/src/App.svelte` | 화면 전체 — 창 크롬, 대화, 상태바, DOS 모드 |
+| `web/src/Settings.svelte` | BYOK 설정 다이얼로그 |
+| `web/src/lib/engine.ts` | 원본 응답 선택 로직 재구현 |
+| `web/src/lib/byok.ts` | OpenAI 호환 요청 생성, 페르소나·고증 프롬프트 |
+| `web/src/lib/era.ts` | 1990년대 고증 팩 검색 (연도 컷오프 + 키워드 매칭) |
+| `web/src/lib/types.ts` | 카탈로그·고증 팩·BYOK 설정의 타입 정의 |
+| `web/public/data/era-1990s.json` | 고증 팩 데이터 |
 | `tools/extract_max4_data.py` | 원본 JOHAB 계열 데이터 추출기 |
 | `docs/decode-notes.md` | 미해독 인코딩 분석 노트 |
 | `docs/era-1990s.md` | 고증 팩 근거와 출처 |
@@ -57,8 +64,9 @@ http://localhost:8080 으로 접속합니다. `file://`로 열면 브라우저 �
 ## 테스트
 
 ```sh
-node --test tests/byok.test.mjs tests/engine.test.mjs tests/era.test.mjs
-python3 -m unittest discover tests
+npm test          # vitest — 엔진·고증·BYOK·마운트
+npm run check     # svelte-check — 타입 검사
+python3 -m unittest discover tests   # 추출기
 ```
 
 원본 데이터가 없으면 그것을 필요로 하는 테스트는 자동으로 건너뜁니다.
@@ -69,6 +77,7 @@ python3 -m unittest discover tests
 **원본 MAX 4.00에는 적용되지 않습니다!**
 
 - [js-dos](https://js-dos.com) — GPL-2.0. 실행 시 공급자 CDN에서 불러오며 이 저장소가 번들·재배포하지 않습니다.
+- [Svelte](https://svelte.dev) — MIT. [Vite](https://vite.dev) — MIT.
 
 ## 고지
 

@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import test from "node:test";
+import { test } from "vitest";
 
-import { eraLines } from "../web/app/era.js";
+import { eraLines } from "../web/src/lib/era";
 
-const pack = JSON.parse(readFileSync(new URL("../web/data/era-1990s.json", import.meta.url)));
+const pack = JSON.parse(readFileSync(new URL("../web/public/data/era-1990s.json", import.meta.url), "utf-8"));
 
 test("keeps only facts the persona could already know", () => {
   const early = eraLines(pack, "IMF 때문에 힘들어", 1994);
@@ -25,10 +25,10 @@ test("a price series collapses to the newest entry at or below the cutoff", () =
   const at1995 = eraLines(pack, "버스 요금 얼마야", 1995).facts.filter((l) => l.includes("버스"));
   const at1998 = eraLines(pack, "버스 요금 얼마야", 1998).facts.filter((l) => l.includes("버스"));
 
-  assert.equal(at1995.length, 1);
-  assert.match(at1995[0], /320원/);
-  assert.equal(at1998.length, 1);
-  assert.match(at1998[0], /500원/);
+  assert.deepEqual(at1995.length, 1);
+  assert.match(at1995.join(""), /320원/);
+  assert.deepEqual(at1998.length, 1);
+  assert.match(at1998.join(""), /500원/);
 });
 
 test("caps how many facts a single turn can inject", () => {

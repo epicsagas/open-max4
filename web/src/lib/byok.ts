@@ -1,4 +1,6 @@
-function completionUrl(endpoint) {
+import type { ByokConfig, ChatMessage, ChatRequest, TurnContext } from "./types";
+
+function completionUrl(endpoint: string): string {
   const url = new URL(endpoint);
   const local = url.hostname === "localhost" || url.hostname === "127.0.0.1";
   if (url.protocol !== "https:" && !local) {
@@ -13,8 +15,8 @@ const BASE = [
   "사용자와 친구처럼 반말 구어체로 대화하며, 한두 문장으로 짧게 답합니다.",
 ];
 
-// persona가 연도면 그 해까지만 아는 고증 모드, 아니면 말투만 잡는 표준 모드.
-export function personaLines(persona) {
+/** persona가 연도면 그 해까지만 아는 고증 모드, 아니면 말투만 잡는 표준 모드. */
+export function personaLines(persona?: string): string[] {
   const year = Number(persona);
   if (!(year >= 1900)) return BASE;
   return [
@@ -27,8 +29,9 @@ export function personaLines(persona) {
   ];
 }
 
-const block = (title, lines) =>
-  lines?.length ? ["", title, ...lines.map((line) => `- ${line}`)] : [];
+function block(title: string, lines?: string[]): string[] {
+  return lines?.length ? ["", title, ...lines.map((line) => `- ${line}`)] : [];
+}
 
 // 고증 팩에는 실존 인물 실명이 들어 있다. 모드와 무관하게 항상 붙인다.
 const SAFETY = [
@@ -38,21 +41,26 @@ const SAFETY = [
   "확실하지 않으면 아는 척하지 말고, 맥스답게 모른다고 하거나 화제를 돌리세요.",
 ];
 
-export function requestFor(config, context) {
+export function requestFor(config: ByokConfig, context: TurnContext): ChatRequest {
   if (!config.apiKey || !config.model) throw new Error("API key and model are required");
   const original = context.originalReply || "(원본 응답 없음)";
   const system = [
     ...personaLines(config.persona),
     ...block("당신이 사는 시대의 일상:", context.era?.always),
     ...block("이번 대화에 관련된 당시 사실:", context.era?.facts),
-    ...(context.era ? ["", "위 배경은 참고용입니다. 묻지 않은 내용을 늘어놓지 말고 필요할 때만 자연스럽게 쓰세요.", ""] : []),
+    ...(context.era
+      ? ["", "위 배경은 참고용입니다. 묻지 않은 내용을 늘어놓지 말고 필요할 때만 자연스럽게 쓰세요.", ""]
+      : []),
     "이번 턴 원본 엔진 응답은 맥스의 말투 참고용입니다.",
     `원본 데이터 출처: ${context.source || "없음"}`,
     `원본 응답: ${original}`,
     "원본 응답을 그대로 반복하지 말고, 지금까지 대화 흐름에 맞게 자연스럽게 답하세요.",
     ...SAFETY,
   ].join("\n");
-  const history = (context.history || []).slice(-10).map(({ role, content }) => ({ role, content }));
+
+  const history: ChatMessage[] = (context.history ?? [])
+    .slice(-10)
+    .map(({ role, content }) => ({ role, content }));
 
   return {
     url: completionUrl(config.endpoint),

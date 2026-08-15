@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
-import test from "node:test";
+import { test } from "vitest";
 
-import { requestFor } from "../web/app/byok.js";
+import { requestFor } from "../web/src/lib/byok";
+import type { ByokConfig, ChatMessage, ChatRequest } from "../web/src/lib/types";
 
 test("builds an OpenAI-compatible request with immutable original context", () => {
   const request = requestFor(
@@ -16,7 +17,7 @@ test("builds an OpenAI-compatible request with immutable original context", () =
 });
 
 test("sends recent conversation history before the user turn", () => {
-  const history = [
+  const history: ChatMessage[] = [
     { role: "user", content: "옛날이야기" },
     { role: "assistant", content: "응, 뭐 궁금한데?" },
   ];
@@ -35,14 +36,15 @@ test("sends recent conversation history before the user turn", () => {
 
 test("rejects an insecure non-local endpoint", () => {
   assert.throws(
-    () => requestFor({ endpoint: "http://example.test", apiKey: "x", model: "m" }, {}),
+    () => requestFor({ endpoint: "http://example.test", apiKey: "x", model: "m" }, { input: "안녕" }),
     /HTTPS or localhost/,
   );
 });
 
 test("a year persona adds the knowledge cutoff guardrail, standard does not", () => {
   const config = { endpoint: "https://api.example.test/v1", apiKey: "k", model: "m" };
-  const systemOf = (c) => JSON.parse(requestFor(c, { input: "안녕" }).options.body).messages[0].content;
+  const systemOf = (c: ByokConfig): string =>
+    JSON.parse(requestFor(c, { input: "안녕" }).options.body).messages[0].content;
 
   assert.match(systemOf({ ...config, persona: "1994" }), /1995년 이후의 사건/);
   assert.match(systemOf({ ...config, persona: "1997" }), /1998년 이후의 사건/);

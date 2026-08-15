@@ -1,16 +1,20 @@
-// 고증 팩에서 이번 턴에 필요한 줄만 골라낸다.
-// 팩 전체를 프롬프트에 넣으면 매 턴 수천 토큰이 나가므로, 컷오프 연도로 거르고
-// 입력 키워드로 매칭한 것만 보낸다.
-export function eraLines(pack, input, cutoff, limit = 6) {
-  const inRange = (fact) => fact.year <= cutoff;
+import type { EraFact, EraLines, EraPack } from "./types";
+
+/**
+ * 고증 팩에서 이번 턴에 필요한 줄만 골라낸다.
+ * 팩 전체를 프롬프트에 넣으면 매 턴 수천 자가 나가므로, 컷오프 연도로 거르고
+ * 입력 키워드로 매칭한 것만 보낸다.
+ */
+export function eraLines(pack: EraPack, input: string, cutoff: number, limit = 6): EraLines {
+  const inRange = (fact: { year: number }): boolean => fact.year <= cutoff;
 
   const matched = pack.facts
     .filter(inRange)
     .filter((fact) => fact.keywords.some((word) => input.includes(word)));
 
   // 물가처럼 값이 갱신되는 계열은 컷오프 이하 최신 1건만 남긴다.
-  const groups = new Map();
-  const picked = [];
+  const groups = new Map<string, EraFact>();
+  const picked: EraFact[] = [];
   for (const fact of matched) {
     if (!fact.group) {
       picked.push(fact);
