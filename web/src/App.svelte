@@ -32,6 +32,8 @@
   }
 
   let catalog = $state<Catalog>();
+  // undefined = 로딩 중, false = 원본 없음(BYOK 전용). 배포본에는 원본이 없다.
+  let hasLocal = $state<boolean>();
   let eraPack = $state<EraPack>();
   const restored = restore();
   let byok = $state<ByokConfig | undefined>(restored);
@@ -42,7 +44,7 @@
   let thinking = $state(false);
   let frame = $state(0);
   let draft = $state("");
-  let lines = $state<Line[]>([{ kind: "max", text: "[맥스] 안녕? 원본 대화 데이터로 실행 중이야." }]);
+  let lines = $state<Line[]>([]);
 
   const history: ChatMessage[] = [];
 
@@ -55,7 +57,9 @@
   const cutoff = $derived(Number(byok?.persona));
   const status = $derived(
     !byokEnabled
-      ? "원본 엔진"
+      ? hasLocal === false
+        ? "BYOK 필요"
+        : "원본 엔진"
       : !byok
         ? "BYOK · 설정 안 됨"
         : cutoff >= 1900
@@ -81,13 +85,28 @@
 
   $effect(() => {
     void (async () => {
-      const [pjm, era] = await Promise.all([
-        fetch("local/max4-pjm.json").then((response) => response.json()),
-        fetch("data/era-1990s.json").then((response) => response.json()),
-      ]);
-      catalog = pjm as Catalog;
-      eraPack = era as EraPack;
+      eraPack = (await fetch("data/era-1990s.json").then((r) => r.json())) as EraPack;
     })();
+    void (async () => {
+      try {
+        const response = await fetch("local/max4-pjm.json");
+        if (!response.ok) throw new Error(String(response.status));
+        catalog = (await response.json()) as Catalog;
+        hasLocal = true;
+      } catch {
+        hasLocal = false;
+      }
+    })();
+  });
+
+  $effect(() => {
+    if (hasLocal === undefined || lines.length) return;
+    push(
+      "max",
+      hasLocal
+        ? "[맥스] 안녕? 원본 대화 데이터로 실행 중이야."
+        : "[맥스] 안녕? 여긴 원본 데이터가 없어서 BYOK로만 얘기할 수 있어.",
+    );
   });
 
   function push(kind: Line["kind"], text: string): void {
@@ -126,7 +145,7 @@
       const text: string | undefined = payload.choices?.[0]?.message?.content?.trim();
       if (text) {
         push("ai", `[맥스 · 확장] ${text}`);
-        turn.content = `${turn.content}\n${text}`;
+        turn.content = turn.content ? `${turn.content}\n${text}` : text;
       }
     } catch (error) {
       push("ai", `BYOK 오류: ${error instanceof Error ? error.message : String(error)}`);
@@ -139,18 +158,23 @@
     event.preventDefault();
     if (busy) return;
     const text = draft.trim();
-    if (!text || !catalog) return;
+    if (!text) return;
     draft = "";
     busy = true;
     push("user", `[당신] ${text}`);
 
-    const original = replyFor(catalog, text);
-    if (!(byokEnabled && byok)) push("max", `[맥스] ${original.text}`);
-    const turn: ChatMessage = { role: "assistant", content: original.text };
+    const original = catalog ? replyFor(catalog, text) : undefined;
+    if (!original && !(byokEnabled && byok)) {
+      push("max", "[맥스] 원본 데이터가 없어. BYOK를 켜고 키를 넣어야 대화할 수 있어.");
+      busy = false;
+      return;
+    }
+    if (original && !(byokEnabled && byok)) push("max", `[맥스] ${original.text}`);
+    const turn: ChatMessage = { role: "assistant", content: original?.text ?? "" };
     const era = cutoff >= 1900 && eraPack ? eraLines(eraPack, text, cutoff) : undefined;
 
     await aiReply(
-      { input: text, originalReply: original.text, source: original.source, history, era },
+      { input: text, originalReply: original?.text, source: original?.source, history, era },
       turn,
     );
 
@@ -195,7 +219,9 @@
             <label class="chk"><input type="checkbox" bind:checked={byokEnabled} /> BYOK</label>
             <span class="sep" aria-hidden="true"></span>
             <button type="button" onclick={() => settings.open()}>BYOK 설정</button>
-            <button type="button" onclick={startDos}>원본 DOS</button>
+            {#if hasLocal}
+              <button type="button" onclick={startDos}>원본 DOS</button>
+            {/if}
           </div>
         </header>
 

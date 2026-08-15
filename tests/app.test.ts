@@ -21,18 +21,21 @@ const catalog = JSON.stringify({
   ),
 });
 
+const settled = () => new Promise((resolve) => setTimeout(resolve, 0));
+
 beforeEach(() => {
   localStorage.clear();
   sessionStorage.clear();
   vi.stubGlobal("fetch", (url: string) =>
-    Promise.resolve({ json: () => Promise.resolve(JSON.parse(url.includes("era") ? pack : catalog)) }),
+    Promise.resolve({ ok: true, json: () => Promise.resolve(JSON.parse(url.includes("era") ? pack : catalog)) }),
   );
 });
 
-test("mounts the shell with the original engine selected", () => {
+test("mounts the shell with the original engine selected", async () => {
   const target = document.createElement("div");
   document.body.append(target);
   const app = mount(App, { target });
+  await settled();
 
   assert.match(target.innerHTML, /open-max4/);
   assert.match(target.innerHTML, /원본 엔진/);
@@ -46,11 +49,12 @@ test("switches the status line when byok is enabled without a key", async () => 
   const target = document.createElement("div");
   document.body.append(target);
   const app = mount(App, { target });
+  await settled();
 
   const checkbox = target.querySelector<HTMLInputElement>('input[type="checkbox"]');
   assert.ok(checkbox);
   checkbox.click();
-  await Promise.resolve();
+  await settled();
 
   assert.match(target.innerHTML, /BYOK · 설정 안 됨/);
   unmount(app);
@@ -60,7 +64,7 @@ test("keeps the composer focused and usable while a turn is in flight", async ()
   const target = document.createElement("div");
   document.body.append(target);
   const app = mount(App, { target });
-  await Promise.resolve();
+  await settled();
 
   const input = target.querySelector<HTMLInputElement>("#input");
   const form = target.querySelector<HTMLFormElement>("#chat-form");
@@ -85,7 +89,7 @@ test("the settings dialog can be typed into and closed from the title bar", asyn
   const target = document.createElement("div");
   document.body.append(target);
   const app = mount(App, { target });
-  await Promise.resolve();
+  await settled();
 
   const dialog = document.querySelector("dialog");
   const key = document.querySelector<HTMLInputElement>('input[type="password"]');
@@ -116,7 +120,7 @@ test("clearing the key leaves the dialog open and the endpoint saved", async () 
   const target = document.createElement("div");
   document.body.append(target);
   const app = mount(App, { target });
-  await Promise.resolve();
+  await settled();
 
   const dialog = document.querySelector("dialog");
   const key = document.querySelector<HTMLInputElement>('input[type="password"]');
@@ -128,7 +132,7 @@ test("clearing the key leaves the dialog open and the endpoint saved", async () 
   );
   assert.ok(forget);
   forget.click();
-  await Promise.resolve();
+  await settled();
 
   assert.equal(key.value, "");
   assert.equal(sessionStorage.getItem("max4-byok-key"), null);
@@ -148,7 +152,7 @@ test("byok follows the key: on when saved or restored, off when cleared", async 
   const target = document.createElement("div");
   document.body.append(target);
   const app = mount(App, { target });
-  await Promise.resolve();
+  await settled();
 
   const checkbox = target.querySelector<HTMLInputElement>('input[type="checkbox"]');
   assert.ok(checkbox);
@@ -160,10 +164,29 @@ test("byok follows the key: on when saved or restored, off when cleared", async 
   );
   assert.ok(forget);
   forget.click();
-  await Promise.resolve();
+  await settled();
 
   assert.equal(checkbox.checked, false, "키를 지우면 꺼져야 한다");
   assert.match(target.innerHTML, /원본 엔진/);
+
+  unmount(app);
+});
+
+test("falls back to byok-only when the original data is not deployed", async () => {
+  vi.stubGlobal("fetch", (url: string) =>
+    url.includes("era")
+      ? Promise.resolve({ ok: true, json: () => Promise.resolve(JSON.parse(pack)) })
+      : Promise.resolve({ ok: false, status: 404, json: () => Promise.reject(new Error("404")) }),
+  );
+
+  const target = document.createElement("div");
+  document.body.append(target);
+  const app = mount(App, { target });
+  await settled();
+
+  assert.match(target.innerHTML, /BYOK로만 얘기할 수 있어/);
+  assert.match(target.innerHTML, /BYOK 필요/);
+  assert.doesNotMatch(target.innerHTML, /원본 DOS/, "번들이 없으면 DOS 버튼도 없어야 한다");
 
   unmount(app);
 });

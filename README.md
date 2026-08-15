@@ -42,9 +42,18 @@ npm run dev
 
 Vite가 알려주는 주소로 접속합니다. 배포용 정적 파일은 `npm run build`로 `dist/`에 만듭니다.
 
-> **`dist/`를 그대로 공개하지 마세요.** 빌드는 `web/public/`을 통째로 복사하므로,
-> 준비해 둔 원본 사본(`web/public/local/`)이 산출물에 그대로 들어갑니다.
-> 공개 배포하려면 그 디렉터리를 비우고 빌드하세요.
+공개 배포용 빌드는 따로 있습니다.
+
+```sh
+npm run build:pages
+```
+
+`npm run build`는 `web/public/`을 통째로 복사하므로 준비해 둔 **원본 사본이 산출물에 들어갑니다.**
+`build:pages`는 그 디렉터리를 산출물에서 제거합니다. 원본 없이 열면 BYOK 전용 모드로 동작하고,
+`원본 DOS` 버튼은 숨겨집니다. 고증 모드는 그대로 쓸 수 있습니다.
+
+GitHub Pages 배포는 `.github/workflows/pages.yml`에 준비돼 있습니다. 수동 실행 전용이며,
+`Settings > Pages`에서 Source를 GitHub Actions로 바꾼 뒤 돌리면 됩니다.
 
 자세한 화면 설명과 BYOK 설정은 [web/README.md](web/README.md)를 보세요.
 
