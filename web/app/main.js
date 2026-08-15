@@ -10,6 +10,7 @@ const endpointEl = document.querySelector("#endpoint");
 const modelEl = document.querySelector("#model");
 const apiKeyEl = document.querySelector("#api-key");
 const personaEl = document.querySelector("#persona");
+const statusEl = document.querySelector("#status");
 const STORE = { config: "max4-byok", key: "max4-byok-key" };
 let catalog;
 let eraPack;
@@ -29,10 +30,37 @@ if (storedKey && stored.endpoint && stored.model) {
 function addLine(text, kind) {
   const line = document.createElement("p");
   line.className = `line ${kind}`;
-  line.textContent = text;
+  // white-space: pre-wrap이라 LLM이 넣는 빈 줄이 그대로 문단 간격이 된다.
+  line.textContent = text.replace(/\n{2,}/g, "\n");
   messages.append(line);
   messages.scrollTop = messages.scrollHeight;
+  return line;
 }
+
+// 90년대 도스 프로그램이 쓰던 회전 막대. 응답 오면 줄째로 걷어낸다.
+const SPINNER = ["|", "/", "-", "\\"];
+
+function startPending() {
+  const line = addLine(`[맥스] 생각중 ${SPINNER[0]}`, "ai");
+  let frame = 0;
+  const timer = setInterval(() => {
+    frame += 1;
+    line.textContent = `[맥스] 생각중 ${SPINNER[frame % SPINNER.length]}`;
+  }, 150);
+  return () => {
+    clearInterval(timer);
+    line.remove();
+  };
+}
+
+function updateStatus() {
+  if (!byokEnabled.checked) return void (statusEl.textContent = "원본 엔진");
+  if (!byok) return void (statusEl.textContent = "BYOK · 설정 안 됨");
+  const year = Number(byok.persona);
+  statusEl.textContent = year >= 1900 ? `BYOK · 고증 ${year}` : "BYOK · 표준";
+}
+
+byokEnabled.addEventListener("change", updateStatus);
 
 const history = [];
 
@@ -42,6 +70,7 @@ async function aiReply(context, turn) {
     dialog.showModal();
     return;
   }
+  const stopPending = startPending();
   try {
     const request = requestFor(byok, context);
     const response = await fetch(request.url, request.options);
@@ -54,14 +83,19 @@ async function aiReply(context, turn) {
     }
   } catch (error) {
     addLine(`BYOK 오류: ${error.message}`, "ai");
+  } finally {
+    stopPending();
   }
 }
 
-document.querySelector("#chat-form").addEventListener("submit", async (event) => {
+const form = document.querySelector("#chat-form");
+form.addEventListener("submit", async (event) => {
   event.preventDefault();
   const text = input.value.trim();
   if (!text || !catalog) return;
   input.value = "";
+  form.querySelector("button").disabled = true;
+  input.disabled = true;
   addLine(`[당신] ${text}`, "user");
   const original = replyFor(catalog, text);
   if (!(byokEnabled.checked && byok)) addLine(`[맥스] ${original.text}`, "max");
@@ -74,6 +108,8 @@ document.querySelector("#chat-form").addEventListener("submit", async (event) =>
   );
   history.push({ role: "user", content: text }, turn);
   if (history.length > 40) history.splice(0, history.length - 40);
+  form.querySelector("button").disabled = false;
+  input.disabled = false;
   input.focus();
 });
 
@@ -91,6 +127,7 @@ document.querySelector("#settings-form").addEventListener("submit", (event) => {
     JSON.stringify({ endpoint: byok.endpoint, model: byok.model, persona: byok.persona }),
   );
   sessionStorage.setItem(STORE.key, byok.apiKey);
+  updateStatus();
   dialog.close();
 });
 
@@ -99,6 +136,7 @@ document.querySelector("#forget").addEventListener("click", () => {
   apiKeyEl.value = "";
   sessionStorage.removeItem(STORE.key);
   localStorage.removeItem(STORE.config);
+  updateStatus();
   dialog.close();
 });
 
@@ -122,4 +160,5 @@ document.querySelector("#back").addEventListener("click", () => {
   ),
 );
 addLine("[맥스] 안녕? 원본 대화 데이터로 실행 중이야.", "max");
+updateStatus();
 input.focus();
