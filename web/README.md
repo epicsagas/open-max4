@@ -1,15 +1,15 @@
 # MAX 4.0 웹 실행
 
-원본 준비 절차는 저장소 루트 [README](../README.md)를 먼저 보세요. 원본 프로그램과 데이터는 이 저장소에 포함되어 있지 않으며, 사용자가 본인 사본을 `ref/max4/`에 두고 `web/local/`로 추출해야 합니다.
+원본 준비 절차는 저장소 루트 [README](../README.md)를 먼저 보세요. 원본 프로그램과 데이터는 이 저장소에 포함되어 있지 않으며, 사용자가 본인 사본을 `ref/max4/`에 두고 `web/public/local/`로 추출해야 합니다.
 
-`web` 디렉터리에서 정적 서버를 실행한 뒤 브라우저로 엽니다.
+저장소 루트에서 개발 서버를 띄웁니다.
 
 ```sh
-cd web
-python3 -m http.server 8080
+npm install
+npm run dev
 ```
 
-http://localhost:8080 에 접속합니다. `file://`로 직접 열면 브라우저 보안 정책 때문에 실행되지 않습니다.
+Svelte + TypeScript를 Vite로 빌드합니다. `web/`이 Vite 루트이고 진입점은 `web/src/main.ts`입니다.
 
 ## 화면
 
